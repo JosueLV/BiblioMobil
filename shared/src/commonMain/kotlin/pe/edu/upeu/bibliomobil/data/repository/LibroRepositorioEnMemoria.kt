@@ -1,2 +1,36 @@
 package pe.edu.upeu.bibliomobil.data.repository
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import pe.edu.upeu.bibliomobil.domain.model.Libro
+import pe.edu.upeu.bibliomobil.domain.repository.LibroRepository
+import kotlin.random.Random
+
+class LibroRepositorioEnMemoria : LibroRepository {
+
+    private val mutex = Mutex()
+    private val libros = mutableListOf<Libro>()
+    private var siguienteId = 1L
+
+    override suspend fun registrar(libro: Libro): Libro {
+        simularLatencia()
+        return mutex.withLock {
+            val libroConId = libro.copy(id = siguienteId)
+            siguienteId += 1
+            libros.add(libroConId)
+            libroConId
+        }
+    }
+
+    override suspend fun listar(): List<Libro> {
+        simularLatencia()
+        return mutex.withLock {
+            libros.toList()
+        }
+    }
+
+    private suspend fun simularLatencia() {
+        delay(Random.nextLong(300, 801))
+    }
+}
