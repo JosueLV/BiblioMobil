@@ -1,0 +1,11 @@
+Pregunta 1
+
+Cuando llegue el backend REST, lo único que va a cambiar son las clases LibroRepositorioEnMemoria y LectorRepositorioEnMemoria de la capa data, que se van a reemplazar por unas nuevas que hagan las peticiones HTTP, y también el registro de esas clases en AppModule.kt para que Koin inyecte la nueva implementación. Todo lo demás queda intacto: los modelos, las interfaces LibroRepository y LectorRepository, los casos de uso y todas las pantallas con sus ViewModels no se tocan, porque siguiendo la regla de dependencia de Clean Architecture, el dominio y la presentación solo conocen la interfaz del repositorio y no les importa si por debajo hay una lista en memoria o una llamada a una API, así que el cambio queda aislado en una sola capa.
+
+Pregunta 2
+
+Si RegistrarLibroUseCase recibiera anio y ejemplares como Int en vez de String, se perdería la posibilidad de detectar cuando el usuario deja el campo vacío o escribe algo que no es un número, porque un TextField de Compose siempre entrega texto, así que alguien tendría que convertir ese texto a número antes de llegar al caso de uso. Ese "alguien" terminaría siendo la pantalla o el ViewModel, y eso sí sería un problema porque las validaciones del Anexo A (que el año sea un entero, que esté en el rango permitido, que los ejemplares no sean negativos) son reglas de negocio, no de interfaz, y si se hicieran en la pantalla se rompería la separación de capas, sería más difícil probarlas con pruebas unitarias simples y se tendrían que repetir si en el futuro otra pantalla necesita la misma validación.
+
+Pregunta 3
+
+Si LibroRepository estuviera registrado en Koin como factory en vez de single, el usuario notaría que los libros que registra desaparecen o que el catálogo aparece vacío en otras partes de la app, porque Koin crearía una instancia nueva de LibroRepositorioEnMemoria cada vez que un ViewModel la pida, y como esa clase guarda los libros en una lista dentro de la propia instancia, cada instancia nueva tendría su propia lista vacía en lugar de compartir los datos ya registrados. Con single, en cambio, Koin usa siempre la misma instancia para toda la aplicación, así que todos los ViewModels que dependen del repositorio ven el mismo catálogo actualizado.
