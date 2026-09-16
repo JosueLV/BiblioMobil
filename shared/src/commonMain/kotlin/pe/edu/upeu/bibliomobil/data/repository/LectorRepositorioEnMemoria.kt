@@ -1,4 +1,4 @@
-package pe.edu.upeu.bibliomobil
+package pe.edu.upeu.bibliomobil.data.repository
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
