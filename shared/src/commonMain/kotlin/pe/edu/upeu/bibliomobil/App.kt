@@ -1,47 +1,98 @@
 package pe.edu.upeu.bibliomobil
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.LocalLibrary
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
-
-import bibliomobil.shared.generated.resources.Res
-import bibliomobil.shared.generated.resources.compose_multiplatform
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import org.koin.compose.KoinContext
+import pe.edu.upeu.bibliomobil.navigation.DESTINOS
+import pe.edu.upeu.bibliomobil.navigation.Screen
+import pe.edu.upeu.bibliomobil.navigation.ScreenSaver
+import pe.edu.upeu.bibliomobil.presentation.components.EstadoVacio
+import pe.edu.upeu.bibliomobil.presentation.inicio.InicioScreen
+import pe.edu.upeu.bibliomobil.presentation.lector.LectorScreen
+import pe.edu.upeu.bibliomobil.presentation.libro.LibroScreen
+import pe.edu.upeu.bibliomobil.theme.BiblioMobilTheme
 
 @Composable
-@Preview
 fun App() {
-    MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
+    KoinContext {
+        var modoOscuro by rememberSaveable { mutableStateOf(false) }
+
+        BiblioMobilTheme(darkTheme = modoOscuro) {
+            var pantallaActual: Screen by rememberSaveable(stateSaver = ScreenSaver) {
+                mutableStateOf(Screen.Inicio)
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+            val scope = rememberCoroutineScope()
+
+            ModalNavigationDrawer(
+                drawerState = drawerState,
+                drawerContent = {
+                    ModalDrawerSheet {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Icon(imageVector = Icons.Default.LocalLibrary, contentDescription = null)
+                            Text("BiblioMobil", style = MaterialTheme.typography.titleLarge)
+                        }
+                        HorizontalDivider()
+                        DESTINOS.forEach { destino ->
+                            NavigationDrawerItem(
+                                label = { Text(destino.titulo) },
+                                icon = { Icon(destino.icono, contentDescription = null) },
+                                selected = destino == pantallaActual,
+                                onClick = {
+                                    pantallaActual = destino
+                                    scope.launch { drawerState.close() }
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        HorizontalDivider()
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Modo oscuro")
+                            Switch(checked = modoOscuro, onCheckedChange = { modoOscuro = it })
+                        }
+                    }
+                }
+            ) {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text(pantallaActual.titulo) },
+                            navigationIcon = {
+                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                    Icon(Icons.Default.LocalLibrary, contentDescription = "Menú")
+                                }
+                            }
+                        )
+                    }
+                ) { padding ->
+                    Box(modifier = Modifier.padding(padding)) {
+                        when (pantallaActual) {
+                            Screen.Inicio -> InicioScreen(onNavegar = { pantallaActual = it })
+                            Screen.Libros -> LibroScreen()
+                            Screen.Lectores -> LectorScreen()
+                            Screen.Prestamos -> EstadoVacio(
+                                icono = Icons.Default.Bookmark,
+                                titulo = "Préstamos en construcción",
+                                descripcion = "Este módulo estará disponible en una próxima versión"
+                            )
+                        }
+                    }
                 }
             }
         }
